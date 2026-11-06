@@ -1,0 +1,42 @@
+{
+  "countries": [
+    {
+      "domain": "hd",
+      "cities": [
+        {
+          "uid": 1172,
+          "places": [
+            {
+              "uid": 1001,
+              "name": "Testna stanica A",
+              "spot": true,
+              "bikes": 3,
+              "bikes_available_to_rent": 0,
+              "free_racks": 7,
+              "maintenance": false
+            },
+            {
+              "uid": 1002,
+              "name": "Testna stanica B",
+              "spot": true,
+              "bikes_available_to_rent": 5,
+              "free_racks": 4,
+              "maintenance": false
+            },
+            {
+              "uid": 1003,
+              "name": "Testna stanica C",
+              "spot": true,
+              "bikes_available_to_rent": 0,
+              "maintenance": true
+            },
+            {
+              "uid": 1004,
+              "spot": false
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
