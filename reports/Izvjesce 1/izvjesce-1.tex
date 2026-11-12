@@ -1,0 +1,131 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[utf8]{inputenc}
+  \usepackage[T1]{fontenc}
+  \usepackage{lmodern}
+\else
+  \usepackage{fontspec}
+  \setmainfont{lmroman10-regular.otf}[
+    BoldFont=lmroman10-bold.otf,
+    ItalicFont=lmroman10-italic.otf,
+    BoldItalicFont=lmroman10-bolditalic.otf]
+  \setmonofont{lmmono10-regular.otf}
+\fi
+\usepackage[croatian]{babel}
+\usepackage[margin=24mm]{geometry}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\setlist[itemize]{nosep,leftmargin=16pt,topsep=3pt}
+\setlist[enumerate]{nosep,leftmargin=18pt,topsep=3pt}
+\hypersetup{pdftitle={Data Monitoring Platform - Izvješće 1},pdfauthor={Leonard Lečić i Dario Golubović}}
+\AtEndDocument{\clearpage\ifnum\value{page}=3\relax\else
+\PackageError{KT1}{Izvjesce mora imati dvije stranice}{Prilagodite duljinu sadrzaja.}\fi}
+\begin{document}
+\begin{center}
+{\Large\bfseries Data Monitoring Platform}\\[5pt]
+{\large Izvješće 1 -- Prva kontrolna točka}\\[7pt]
+Leonard Lečić i Dario Golubović\\
+Skriptni jezici \quad | \quad 28. listopada 2026.
+\end{center}
+
+\section*{1. Opis problema i cilj}
+Projekt je sustav Python skripti za automatsko prikupljanje, obradu i
+praćenje podataka iz više vanjskih API-ja. Cilj je objediniti podatke,
+izgraditi povijest, izračunavati promjene i upozoravati na zadane uvjete.
+Web sučelje služit će pregledu rezultata i konfiguraciji pravila.
+
+Naglasak je na skriptiranju i automatizaciji: raspoređenom izvršavanju,
+obradi JSON i CSV zapisa, normalizaciji, statistici, generiranju sažetaka
+i automatskim obavijestima. Dohvat i obrada radit će neovisno o tome je li
+web sučelje otvoreno. Rješenje se razvija samostalno, s prilagodljivim
+modulima za različite vrste podataka.
+
+\section*{2. Opseg i automatizacija}
+Planirana su tri API sučelja: \textbf{cijene.dev} za cijene proizvoda te
+\textbf{Open-Meteo Weather} i \textbf{Open-Meteo Air Quality} za vrijeme
+i kvalitetu zraka. Pratit će se odabrani proizvodi i poslovnice te
+vremenski podaci i PM2.5/PM10 za Rijeku i Zagreb. Cijene će se dohvaćati
+dnevno, a ostali podaci jednom na sat, uz prilagodljiv raspored.
+
+Predviđene su sljedeće mogućnosti:
+\begin{itemize}
+\item konfiguracija izvora, lokacija, intervala i pragova bez izmjene koda;
+\item automatski i ručni dohvat, ponovni uvoz te obrada spremljenih podataka;
+\item povijesna pohrana, provjera valjanosti i uklanjanje duplikata;
+\item osnovna statistika, klizni prosjeci, trendovi i otkrivanje odstupanja;
+\item pravila upozorenja i automatsko slanje e-pošte preko SMTP-a;
+\item dnevni i tjedni sažeci te uvoz i izvoz u CSV/JSON formatu;
+\item evidencija izvršavanja, provjera svježine podataka i sigurnosne kopije.
+\end{itemize}
+
+Sučelje će prikazivati grafove i upozorenja, omogućiti pretragu i filtriranje
+te povremeno osvježavati prikaz bez ponovnog učitavanja stranice. Ručni
+zahtjev za novim podacima pokretat će isti postupak kao raspoređeni posao.
+
+\section*{3. Tehnologije}
+Glavni jezik bit će \textbf{Python 3.12+}. Koristit će se \textbf{httpx} za
+HTTP zahtjeve, \mbox{\textbf{Pydantic}} za validaciju, \textbf{SQLite} i
+\texttt{sqlite3} za pohranu, \textbf{pandas} za analizu te
+\textbf{APScheduler} za raspored. Standardni moduli \texttt{argparse},
+\texttt{tomllib}, \texttt{logging}, \texttt{csv}, \texttt{json} i
+\texttt{smtplib} pokrivat će naredbe, konfiguraciju, logove, izvoz i e-poštu.
+
+\textbf{PowerShell} skripte pojednostavit će pokretanje i provjere.
+\textbf{FastAPI} i \textbf{Uvicorn} izlagat će rezultate, a
+\mbox{\textbf{JavaScript}} i \textbf{Chart.js} prikazivati ih uz HTML/CSS.
+Testovi će se pisati u \textbf{pytestu}, a kod verzionirati Gitom.
+
+\newpage
+\section*{4. Arhitektura i obrada}
+Sustav će biti podijeljen na module za dohvat, normalizaciju, pohranu,
+analizu, pravila, obavijesti i API. Zaseban Python proces izvršavat će
+raspoređene poslove. Naredbe za dohvat, analizu, izvoz i sigurnosnu kopiju
+koristit će iste funkcije kao automatizirani poslovi. Novi izvor dodavat
+će se zasebnim adapterom koji vraća zajednički format zapisa.
+\begin{center}
+\small Dohvat $\rightarrow$ validacija $\rightarrow$ pohrana
+$\rightarrow$ analiza $\rightarrow$ pravila i obavijesti
+\end{center}
+
+Zapis će sadržavati izvor, identitet entiteta, metriku, vrijednost, jedinicu
+te vrijeme podatka i preuzimanja. Baza će sadržavati i izvršavanja poslova,
+pravila i događaje upozorenja. Cijene će se obrađivati tipom
+\texttt{Decimal}, a vremena pohranjivati u UTC-u. Analiza će uspoređivati
+iste metrike i jedinice; cijene istog proizvoda i pakiranja u istoj
+poslovnici. Ponovni uvoz neće stvarati duplikate.
+
+Pravila će obuhvaćati prelazak praga, značajnu postotnu promjenu i
+zastarjele podatke. Evaluirat će se nakon dohvata, uz ograničavanje
+ponavljanja obavijesti. Poslovi će imati timeout, ograničene ponovne
+pokušaje i zapis ishoda. Pogreška jednog izvora neće zaustaviti ostale;
+neuspjela e-pošta evidentirat će se za naknadno slanje.
+
+\section*{5. Napredak u prvoj kontrolnoj točki}
+Postavljen je repozitorij \texttt{data-monitoring-platform}. Definirani su
+problem, opseg, tehnologije, struktura modula i plan razvoja za dva člana.
+Razrađen je tok od dohvata do obavijesti te konfiguriranje i samostalno
+pokretanje skripti. Implementacija integracija i aplikacijskih
+funkcionalnosti slijedi u idućim kontrolnim točkama.
+
+\section*{6. Plan i organizacija rada}
+\begin{itemize}
+\item \textbf{KT1 -- 1. studenoga:} repozitorij, definicija projekta,
+arhitektura, izbor tehnologija i raspored rada.
+\item \textbf{KT2 -- 27. studenoga:} API adapteri, konfiguracija, naredbe
+za ručni dohvat, SQLite pohrana, raspoređivanje i logovi; testovi
+neispravnih odgovora i ponovnog uvoza te početak prikupljanja povijesti.
+\item \textbf{KT3 -- 18. prosinca:} analitika, pravila, SMTP obavijesti,
+CSV/JSON izvoz i sažeci; API i sučelje s filtrima, grafovima i
+automatskim osvježavanjem.
+\item \textbf{KT4 -- 22. siječnja:} provjera svježine, sigurnosne kopije
+i oporavak, integracijski testovi, ispravci i dokumentacija;
+demonstracija cijelog automatiziranog postupka i rada pri greškama.
+\end{itemize}
+
+Rad će se podijeliti na dohvat, pohranu i raspoređivanje te na analitiku,
+pravila, obavijesti i prikaz. Oba člana sudjelovat će u Python dijelu;
+integracija, testiranje i dokumentacija provodit će se zajednički.
+\end{document}

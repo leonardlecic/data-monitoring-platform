@@ -1,0 +1,134 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[utf8]{inputenc}
+  \usepackage[T1]{fontenc}
+  \usepackage{lmodern}
+\else
+  \usepackage{fontspec}
+  \setmainfont{lmroman10-regular.otf}[
+    BoldFont=lmroman10-bold.otf,
+    ItalicFont=lmroman10-italic.otf,
+    BoldItalicFont=lmroman10-bolditalic.otf]
+  \setmonofont{lmmono10-regular.otf}
+\fi
+\usepackage[croatian]{babel}
+\usepackage[margin=24mm]{geometry}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\setlist[itemize]{nosep,leftmargin=16pt,topsep=3pt}
+\setlist[enumerate]{nosep,leftmargin=18pt,topsep=3pt}
+\hypersetup{pdftitle={Data Monitoring Platform - Izvješće 1.1},pdfauthor={Leonard Lečić i Dario Golubović}}
+\AtEndDocument{\clearpage\ifnum\value{page}=3\relax\else
+\PackageError{KT1}{Izvjesce mora imati dvije stranice}{Prilagodite duljinu sadrzaja.}\fi}
+\begin{document}
+\begin{center}
+{\Large\bfseries Data Monitoring Platform}\\[5pt]
+{\large Izvješće 1.1 -- Prva kontrolna točka}\\[7pt]
+Leonard Lečić i Dario Golubović\\
+Skriptni jezici \quad | \quad 6. studenoga 2026.
+\end{center}
+
+\section*{1. Opis problema i cilj}
+Zagrebački sustav javnih bicikala Bajs putem Nextbikea objavljuje
+trenutačno stanje stanica. Platforma će Python skriptom redovito
+spremati ta stanja u lokalnu bazu i tako izgraditi vlastitu povijest.
+Iz prikupljenih snimki utvrdit ćemo na kojim stanicama najčešće
+ponestaje bicikala i u koje doba dana.
+
+Rezultati će biti dostupni na jednoj web stranici. Korisnik će moći
+odabrati stanicu s popisa i na grafu vidjeti u kojim je satima
+najčešće bila prazna. Dohvat i obrada izvodit će se i kad je preglednik
+zatvoren.
+
+\section*{2. Opseg i automatizacija}
+Glavni izvor je \href{https://maps.nextbike.net/maps/nextbike-live.json?city=1172&domains=hd&list_cities=0&bikes=0}{\textbf{Bajs (Nextbike Live)}}.
+Osnovna verzija bilježit će identifikator i naziv stanice, broj dostupnih
+bicikala, broj slobodnih mjesta kad je dostupan, status održavanja i
+vrijeme dohvata. Početni interval od pet minuta moći će se promijeniti
+u konfiguracijskoj datoteci. Ista skripta omogućit će ručni dohvat.
+
+Web stranica prikazat će koliko je stanica bilo aktivno pri zadnjem
+uspješnom dohvatu, koliko ih je bilo bez bicikala i kada je dohvat
+obavljen. Stanice ćemo poredati prema udjelu snimki bez bicikala u
+posljednjih sedam dana. Odabirom stanice prikazat će se graf po satima.
+
+Nadogradnje ćemo birati prema raspoloživom vremenu i prikupljenim
+podacima.
+\begin{itemize}
+\item Satni podaci o oborinama iz izvora
+\href{https://open-meteo.com/en/docs/historical-weather-api}{\textbf{Open-Meteo Weather}}
+za usporedbu dostupnosti u istim satima kišnih i suhih dana
+\item Praćenje bicikala koji se više dana pojavljuju na istoj stanici,
+provjera prekoračenja poznatog kapaciteta, klizni prosjeci i odstupanja
+\item Podesivi pragovi i obavijesti e-poštom preko SMTP-a, dnevni i tjedni
+sažeci te uvoz i izvoz u CSV/JSON formatu
+\item Pretraga, dodatni filtri, automatsko osvježavanje prikaza i
+pokretanje ručnog dohvata iz sučelja
+\end{itemize}
+
+\section*{3. Tehnologije}
+Koristit ćemo \textbf{Python 3.12+}, \textbf{httpx} za dohvat,
+\textbf{APScheduler} za raspored i \textbf{SQLite} uz modul
+\texttt{sqlite3} za pohranu i upite. Naredbe, konfiguracija i zapis
+izvršavanja oslanjat će se na module \texttt{argparse}, \texttt{tomllib}
+i \texttt{logging}.
+
+\textbf{FastAPI} i \textbf{Uvicorn} poslužit će jednu HTML stranicu i
+podatke za graf. Prikaz ćemo izraditi u JavaScriptu uz \textbf{Chart.js},
+a provjere dohvata i obrade pisati u \textbf{pytestu}.
+
+\newpage
+\section*{4. Arhitektura i obrada}
+Jedna funkcija obavljat će dohvat, provjeru i spremanje podataka. Pozivat
+će je i ručna naredba i raspoređeni posao. Web aplikacija čitat će
+spremljene snimke iz iste SQLite baze.
+
+\begin{center}
+\small Dohvat $\rightarrow$ validacija $\rightarrow$ pohrana
+$\rightarrow$ analiza $\rightarrow$ prikaz
+\end{center}
+
+Pri dohvatu provjerit ćemo identifikator stanice, tipove podataka i
+nenegativnost broja bicikala. Vrijeme snimke spremat će se u UTC-u.
+Kombinacija identifikatora stanice i vremena snimke spriječit će
+dvostruki zapis iste snimke. Kod neuspjelog dohvata zabilježit ćemo
+grešku, a na stranici će ostati vidljivo vrijeme posljednjeg uspjeha.
+
+Za svaku ćemo stanicu izračunati udio valjanih snimki u kojima je broj
+bicikala bio nula. Snimke stanica na održavanju izostavit ćemo iz
+izračuna. Na grafu će se isti pokazatelj prikazati po lokalnom satu,
+uz broj valjanih snimki za taj sat. Sati za koje nema valjanih snimki
+bit će označeni kao razdoblja bez podataka.
+
+\section*{5. Napredak u prvoj kontrolnoj točki}
+Postavljen je repozitorij \texttt{data-monitoring-platform}. Nakon
+povratne informacije nastavnika dogovoren je Bajs kao glavni izvor.
+Definirani su osnovni opseg, tijek obrade i podjela rada. Izrada
+adaptera i početak prikupljanja snimki planirani su za drugu
+kontrolnu točku.
+
+\section*{6. Plan i organizacija rada}
+\begin{itemize}
+\item \textbf{KT1 -- 1. studenoga.} Definicija projekta, odabir izvora
+i tehnologija te plan rada.
+\item \textbf{KT2 -- 27. studenoga.} Bajs adapter, ručni i raspoređeni
+dohvat, SQLite pohrana i logovi. Provjera neispravnog odgovora i
+dvostrukog zapisa te početak prikupljanja povijesti.
+\item \textbf{KT3 -- 18. prosinca.} Izračun udjela snimki bez bicikala,
+popis stanica i graf po satima. Prema mogućnostima dodati usporedbu
+s oborinama ili drugu nadogradnju iz opsega.
+\item \textbf{KT4 -- 22. siječnja.} Provjera cijelog postupka, ispravci
+i dokumentacija. Demonstracija s prikupljenim podacima i prikazom
+neuspjelog dohvata. Prema mogućnostima dodati ponovne pokušaje dohvata,
+upozorenje na zastarjele podatke te sigurnosnu kopiju i oporavak baze.
+\end{itemize}
+
+Jedan član preuzet će dohvat, pohranu i raspored, a drugi analitiku
+i prikaz. Oba člana radit će na Python dijelu te zajedno provjeriti
+integraciju i pripremiti demonstraciju.
+
+\end{document}
+
