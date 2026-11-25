@@ -20,6 +20,31 @@ prikazuje vrijeme zadnje snimke u UTC-u te broj aktivnih stanica, aktivnih
 stanica bez dostupnih bicikala i stanica na održavanju. Neuspjeli dohvat
 ostavlja zadnju snimku dostupnom za pregled.
 
+## Automatsko prikupljanje
+
+Na računalu koje skuplja podatke, nakon instalacije iz prethodnog odjeljka,
+pokrenite iz korijena repozitorija.
+
+```powershell
+./scripts/install-bajs-task.ps1
+Get-Content ./data/bajs-collector.log -Tail 10
+```
+
+Skripta odmah pokreće **Data Monitoring Platform - Bajs Collector** i
+postavlja automatsko pokretanje pri prijavi istog korisnika u Windows.
+Prikupljanje radi u pozadini dok je korisnik prijavljen. Zadatak traži
+od Windowsa da spriječi automatsko mirovanje tijekom dohvata, a zaslon
+se može ugasiti prema postavkama računala.
+Prva snimka sprema se odmah, a interval određuje `bajs_interval_minutes`
+u konfiguraciji. Nakon pogreške dohvat se nastavlja u sljedećem ciklusu.
+Ishodi se zapisuju u `data/bajs-collector.log`.
+
+Ista naredba može se pokrenuti ručno u terminalu i zaustaviti s Ctrl+C.
+
+```powershell
+./.venv/Scripts/python.exe -m data_monitoring watch
+```
+
 ## Provjera bez mreže
 
 ```powershell

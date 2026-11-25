@@ -1,0 +1,126 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[utf8]{inputenc}
+  \usepackage[T1]{fontenc}
+  \usepackage{lmodern}
+\else
+  \usepackage{fontspec}
+  \setmainfont{lmroman10-regular.otf}[
+    BoldFont=lmroman10-bold.otf,
+    ItalicFont=lmroman10-italic.otf,
+    BoldItalicFont=lmroman10-bolditalic.otf]
+  \setmonofont{lmmono10-regular.otf}
+\fi
+\usepackage[croatian]{babel}
+\usepackage[margin=24mm]{geometry}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\setlist[itemize]{nosep,leftmargin=16pt,topsep=3pt}
+\setlist[enumerate]{nosep,leftmargin=18pt,topsep=3pt}
+\hypersetup{pdftitle={Data Monitoring Platform - Izvješće 2},pdfauthor={Leonard Lečić i Dario Golubović}}
+\AtEndDocument{\clearpage\ifnum\value{page}=3\relax\else
+\PackageError{KT2}{Izvjesce mora imati dvije stranice}{Prilagodite duljinu sadrzaja.}\fi}
+\begin{document}
+\begin{center}
+{\Large\bfseries Data Monitoring Platform}\\[5pt]
+{\large Izvješće 2 -- Druga kontrolna točka}\\[7pt]
+Leonard Lečić i Dario Golubović\\
+Skriptni jezici \quad | \quad 25. studenoga 2026.
+\end{center}
+
+
+
+\section*{1. Napredak u drugoj kontrolnoj točki}
+Napravili smo Python program koji prikuplja stanje Bajs stanica u
+Zagrebu i sprema podatke u lokalnu bazu. Dohvat radi automatski
+svakih pet minuta, a može se pokrenuti i ručno. Tako smo počeli
+graditi povijest iz koje ćemo kasnije vidjeti koje stanice najčešće
+ostaju bez bicikala i u koje doba dana.
+
+\section*{2. Automatsko prikupljanje}
+Podatke preuzimamo iz javnog Nextbike API-ja. Za svaku stanicu
+spremamo njezin broj i naziv, broj dostupnih bicikala, broj slobodnih
+mjesta kad je dostupan, oznaku održavanja i vrijeme dohvata.
+Prije spremanja provjeravamo jesu li potrebni podaci prisutni,
+jesu li odgovarajućeg tipa i je li broj bicikala valjan.
+
+Naredba \texttt{collect} pokreće jedan dohvat, a \texttt{watch}
+ponavlja isti postupak u zadanom razmaku. Početni razmak je pet
+minuta i može se promijeniti u konfiguracijskoj datoteci.
+U dnevnik se zapisuju uspješni i neuspjeli pokušaji. Ako dohvat
+ne uspije, program ponovno pokušava u sljedećem ciklusu.
+
+Na računalu koje skuplja podatke postavili smo Windows zadatak
+koji pokreće program pri prijavi korisnika. Program radi u pozadini
+i traži da računalo tijekom prikupljanja ostane budno.
+Zadatak dopušta jedno pokretanje programa u isto vrijeme.
+
+\section*{3. Spremanje i pregled podataka}
+Za pohranu koristimo \textbf{SQLite}. Svaki redak u bazi opisuje
+jednu stanicu u trenutku dohvata. Vrijeme spremamo u UTC-u, a
+identifikator stanice i vrijeme snimke zajedno sprječavaju
+dvostruko spremanje istog zapisa. Podaci iz jednog dohvata
+spremaju se zajedno.
+
+Naredba \texttt{status} prikazuje vrijeme zadnje snimke, broj
+aktivnih stanica, koliko ih je bez bicikala i koliko je stanica
+na održavanju. Dodali smo i uvoz ranije spremljenog JSON odgovora
+uz njegovo izvorno vrijeme dohvata. To koristimo za provjere i
+ponavljanje istog postupka bez pristupa API-ju.
+
+Program je napisan u \textbf{Pythonu 3.12+}, uz standardne module
+za mrežne zahtjeve, JSON, konfiguraciju, bazu i dnevnike rada.
+Windows zadatak postavljamo \textbf{PowerShell} skriptom.
+Za testiranje koristimo \textbf{pytest}, a za provjeru koda
+\textbf{Ruff}.
+
+\newpage
+\section*{4. Prikupljeni podaci}
+Prikupljanje smo pokrenuli 12. studenoga 2026. u 20:01.
+Do 25. studenoga u 18:17 prikupili smo \textbf{3.683 snimke}
+s po 200 stanica, odnosno \textbf{736.600 zapisa}.
+Baza je tada zauzimala približno 93~MB.
+
+U zadnjoj snimci bilo je 155 aktivnih stanica, od kojih je deset
+bilo bez dostupnih bicikala. Još 45 stanica bilo je označeno za
+održavanje. Ovu oznaku uzet ćemo u obzir pri analizi dostupnosti.
+
+Za izvješće smo sačuvali kopiju baze i provjerili njezinu
+ispravnost. Prikupljanje se nastavlja kako bismo dobili više
+podataka za daljnju analizu. Kod, testovi i izvješća nalaze se
+u Git repozitoriju, a baza i dnevnici čuvaju se lokalno.
+
+\section*{5. Provjere i poteškoće}
+Prošlo je svih \textbf{26 testova}, a kod je prošao i Ruff provjeru.
+Provjerili smo konfiguraciju, obradu odgovora, uvoz spremljenih
+podataka i prikaz zadnje snimke. Provjerili smo i prepoznavanje
+već spremljenih snimki te nastavak prikupljanja nakon mrežne
+pogreške.
+
+Prvi veći problem pojavio se 13. studenoga, kada je računalo
+prešlo u mirovanje. Ponovno smo pokrenuli program i dodali
+zaštitu od automatskog mirovanja tijekom prikupljanja.
+Dogodili su se i pojedinačni problemi s mrežom ili čekanjem
+odgovora API-ja. Program ih je zabilježio i nastavio raditi
+u sljedećem ciklusu. Takvi prekidi vidljivi su kao praznine
+između spremljenih snimki.
+
+\section*{6. Plan za nastavak rada}
+Za KT3, do 18. prosinca, planiramo napraviti web stranicu s
+kartom stanica. Klikom na stanicu otvorit će se njezina povijest,
+graf po satima i osnovna statistika. Dodat ćemo popis stanica
+koje najčešće ostaju bez bicikala te mogućnost odabira favorita
+i uobičajenog vremena korištenja.
+
+Za KT4, do 22. siječnja, planiramo povezati podatke s vremenskim
+API-jem Open-Meteo i usporediti dostupnost bicikala u kišnim i
+suhim terminima. Na temelju rezultata i korisničkih postavki
+dodat ćemo obavijesti e-poštom. Na kraju ćemo provjeriti cijeli
+postupak, ispraviti preostale greške i dovršiti upute.
+Posao ćemo podijeliti na analizu i prikaz te povezivanje s
+vremenom i obavijestima, uz zajedničku provjeru aplikacije.
+
+\end{document}

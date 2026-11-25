@@ -5,6 +5,7 @@ from io import BytesIO
 from pathlib import Path
 from urllib.error import URLError
 
+from data_monitoring import cli
 from data_monitoring.cli import main
 from data_monitoring.collectors import bajs
 
@@ -67,3 +68,40 @@ def test_live_collect_uses_bajs_endpoint_and_preserves_snapshot_on_network_error
     assert main(["collect", *options]) == 1
     assert main(["status", *options]) == 0
     assert json.loads(capsys.readouterr().out)["last_snapshot_utc"] == saved["captured_at_utc"]
+
+
+def test_watch_continues_after_failed_collection(tmp_path, monkeypatch, caplog):
+    config = tmp_path / "settings.toml"
+    config.write_text(
+        CONFIG.read_text(encoding="utf-8").replace(
+            "bajs_interval_minutes = 5", "bajs_interval_minutes = 2"
+        ),
+        encoding="utf-8",
+    )
+    replies = iter([SAMPLE.read_bytes(), None, SAMPLE.read_bytes()])
+
+    def download(url, *, timeout):
+        reply = next(replies)
+        if reply is None:
+            raise URLError("temporary outage")
+        return BytesIO(reply)
+
+    intervals = []
+
+    def sleep(seconds):
+        intervals.append(seconds)
+        if len(intervals) == 3:
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(bajs, "urlopen", download)
+    monkeypatch.setattr(cli, "monotonic", lambda: 0)
+    monkeypatch.setattr(cli, "sleep", sleep)
+    database = tmp_path / "watch.sqlite3"
+
+    assert main(["watch", "--config", str(config), "--database", str(database)]) == 0
+    assert intervals == [120, 120, 120]
+    assert "temporary outage" in caplog.text
+    with closing(sqlite3.connect(database)) as connection:
+        assert connection.execute(
+            "SELECT COUNT(DISTINCT captured_at_utc), COUNT(*) FROM station_snapshots"
+        ).fetchone() == (2, 6)

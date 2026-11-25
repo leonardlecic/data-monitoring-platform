@@ -18,6 +18,7 @@ class Settings:
     longitude: float
     prices_enabled: bool
     daily_request_budget: int
+    bajs_interval_minutes: int = 5
 
 
 def _positive_int(table: dict, key: str) -> int:
@@ -71,6 +72,9 @@ def load_settings(path: Path) -> Settings:
             longitude=_coordinate(weather, "longitude", 180),
             prices_enabled=prices["enabled"],
             daily_request_budget=budget,
+            bajs_interval_minutes=_positive_int(
+                {"bajs_interval_minutes": 5} | collection, "bajs_interval_minutes"
+            ),
         )
     except KeyError as exc:
         raise ValueError(f"Missing configuration key: {exc.args[0]}") from exc

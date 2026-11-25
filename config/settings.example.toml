@@ -1,4 +1,3 @@
-# Design defaults, not an active collection schedule.
 [app]
 display_timezone = "Europe/Zagreb"
 database_path = "data/monitoring.sqlite3"
@@ -6,6 +5,7 @@ database_path = "data/monitoring.sqlite3"
 [collection]
 timeout_seconds = 15
 max_attempts = 3
+bajs_interval_minutes = 5
 weather_interval_minutes = 60
 prices_interval_minutes = 1440
 
