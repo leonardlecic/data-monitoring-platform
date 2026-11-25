@@ -51,6 +51,7 @@ def test_example_and_relative_database_path():
 
 @pytest.mark.parametrize(("old", "new"), [
     ("timeout_seconds = 15", "timeout_seconds = 0"),
+    ("bajs_interval_minutes = 5", "bajs_interval_minutes = 0"),
     ("max_attempts = 3", "max_attempts = true"),
     ("max_attempts = 3", "max_attempts = 6"),
     ("latitude = 45.8150", "latitude = 91"),
