@@ -32,96 +32,95 @@ Skriptni jezici \quad | \quad 25. studenoga 2026.
 \end{center}
 
 
-\section*{1. Cilj i ostvareni opseg}
-U drugoj kontrolnoj točki izrađen je postupak za dohvat i pohranu
-trenutačnog stanja Bajs stanica u Zagrebu. Python aplikacija gradi
-vlastitu povijest dostupnosti bicikala iz javnog Nextbike izvora.
-Implementirani su ručni dohvat, periodičko prikupljanje i pregled
-posljednje spremljene snimke kroz naredbeni redak.
 
-\section*{2. Dohvat i automatizacija}
-Adapter obrađuje JSON odgovor za Zagreb, s oznakom grada 1172.
-Za stanicu preuzima identifikator, naziv, broj bicikala dostupnih za
-najam, slobodna mjesta kad su dostupna te oznaku održavanja.
-Provjeravaju se obvezna polja, tipovi podataka, nenegativnost broja
-bicikala i jedinstvenost identifikatora stanica unutar odgovora.
+\section*{1. Napredak u drugoj kontrolnoj točki}
+Napravili smo Python program koji prikuplja stanje Bajs stanica u
+Zagrebu i sprema podatke u lokalnu bazu. Dohvat radi automatski
+svakih pet minuta, a može se pokrenuti i ručno. Tako smo počeli
+graditi povijest iz koje ćemo kasnije vidjeti koje stanice najčešće
+ostaju bez bicikala i u koje doba dana.
 
-Naredba \texttt{collect} dohvaća jednu snimku, a \texttt{watch} ponavlja
-isti postupak svakih pet minuta. Interval i vremensko ograničenje
-zahtjeva određuju se u TOML konfiguraciji. Neuspjeli dohvat zapisuje
-se u dnevnik, nakon čega se postupak ponavlja u idućem ciklusu.
-Dnevnik ima ograničenu veličinu i rotaciju datoteka.
+\section*{2. Automatsko prikupljanje}
+Podatke preuzimamo iz javnog Nextbike API-ja. Za svaku stanicu
+spremamo njezin broj i naziv, broj dostupnih bicikala, broj slobodnih
+mjesta kad je dostupan, oznaku održavanja i vrijeme dohvata.
+Prije spremanja provjeravamo jesu li potrebni podaci prisutni,
+jesu li odgovarajućeg tipa i je li broj bicikala valjan.
 
-Prikupljanje je pokrenuto na jednom računalu kroz Windows Task
-Scheduler. Skripta za postavljanje zadatka omogućuje pokretanje u
-pozadini i pri prijavi korisnika. Python proces tijekom rada traži
-sprječavanje automatskog mirovanja. Zadatak je podešen da zanemari
-dodatno pokretanje dok postojeća instanca radi.
+Naredba \texttt{collect} pokreće jedan dohvat, a \texttt{watch}
+ponavlja isti postupak u zadanom razmaku. Početni razmak je pet
+minuta i može se promijeniti u konfiguracijskoj datoteci.
+U dnevnik se zapisuju uspješni i neuspjeli pokušaji. Ako dohvat
+ne uspije, program ponovno pokušava u sljedećem ciklusu.
 
-\section*{3. Pohrana i korištene tehnologije}
-Podaci se spremaju u \textbf{SQLite} bazu. Jedan redak predstavlja stanje
-jedne stanice u trenutku dohvata, a vrijeme se pohranjuje u UTC-u.
-Primarni ključ čine vrijeme snimke i identifikator stanice. Cijela
-snimka zapisuje se u jednoj transakciji. Ponovni uvoz iste snimke
-s istim vremenom preuzimanja prepoznaje se kao već spremljen zapis.
+Na računalu koje skuplja podatke postavili smo Windows zadatak
+koji pokreće program pri prijavi korisnika. Program radi u pozadini
+i traži da računalo tijekom prikupljanja ostane budno.
+Zadatak dopušta jedno pokretanje programa u isto vrijeme.
 
-Naredba \texttt{status} čita posljednju snimku te ispisuje vrijeme
-dohvata i broj aktivnih stanica, aktivnih stanica bez bicikala i
-stanica na održavanju. Spremljeni Nextbike JSON može se uvesti
-naredbom \texttt{collect --from-json} uz izvorno vrijeme snimke.
+\section*{3. Spremanje i pregled podataka}
+Za pohranu koristimo \textbf{SQLite}. Svaki redak u bazi opisuje
+jednu stanicu u trenutku dohvata. Vrijeme spremamo u UTC-u, a
+identifikator stanice i vrijeme snimke zajedno sprječavaju
+dvostruko spremanje istog zapisa. Podaci iz jednog dohvata
+spremaju se zajedno.
 
-Izvedba koristi \textbf{Python 3.12+} i standardne module
-\texttt{urllib.request}, \texttt{json}, \texttt{sqlite3},
-\texttt{argparse}, \texttt{tomllib}, \texttt{logging} i \texttt{time}.
-Za provjere se koriste \textbf{pytest} i \textbf{Ruff}, a za
-postavljanje Windows zadatka \textbf{PowerShell}.
+Naredba \texttt{status} prikazuje vrijeme zadnje snimke, broj
+aktivnih stanica, koliko ih je bez bicikala i koliko je stanica
+na održavanju. Dodali smo i uvoz ranije spremljenog JSON odgovora
+uz njegovo izvorno vrijeme dohvata. To koristimo za provjere i
+ponavljanje istog postupka bez pristupa API-ju.
+
+Program je napisan u \textbf{Pythonu 3.12+}, uz standardne module
+za mrežne zahtjeve, JSON, konfiguraciju, bazu i dnevnike rada.
+Windows zadatak postavljamo \textbf{PowerShell} skriptom.
+Za testiranje koristimo \textbf{pytest}, a za provjeru koda
+\textbf{Ruff}.
 
 \newpage
-\section*{4. Rezultati prikupljanja}
-Automatsko prikupljanje započelo je 12. studenoga 2026. u 20:01.
-Do presjeka 25. studenoga u 18:17 spremljene su \textbf{3.683 snimke},
-odnosno \textbf{736.600 zapisa o stanicama}. Svaka od tih snimki
-sadržava 200 stanica. Lokalna baza pri presjeku zauzima približno
-93 MB.
+\section*{4. Prikupljeni podaci}
+Prikupljanje smo pokrenuli 12. studenoga 2026. u 20:01.
+Do 25. studenoga u 18:17 prikupili smo \textbf{3.683 snimke}
+s po 200 stanica, odnosno \textbf{736.600 zapisa}.
+Baza je tada zauzimala približno 93~MB.
 
-U posljednjoj snimci bilo je 155 stanica bez oznake održavanja.
-Među njima je deset stanica bilo bez dostupnih bicikala.
-Preostalih 45 stanica bilo je označeno za održavanje.
-Takvo razdvajanje koristit će se pri izračunu učestalosti praznih
-stanica.
+U zadnjoj snimci bilo je 155 aktivnih stanica, od kojih je deset
+bilo bez dostupnih bicikala. Još 45 stanica bilo je označeno za
+održavanje. Ovu oznaku uzet ćemo u obzir pri analizi dostupnosti.
 
-Za izvješće je spremljena lokalna sigurnosna kopija baze, čija je
-struktura provjerena SQLite naredbom \texttt{PRAGMA quick\_check}.
-Glavna baza nastavlja prikupljati nove snimke. Lokalni podaci,
-dnevnici i Python okruženje obuhvaćeni su pravilima ignoriranja
-u Gitu, a izvorni kod, testovi i izvješća nalaze se u repozitoriju.
+Za izvješće smo sačuvali kopiju baze i provjerili njezinu
+ispravnost. Prikupljanje se nastavlja kako bismo dobili više
+podataka za daljnju analizu. Kod, testovi i izvješća nalaze se
+u Git repozitoriju, a baza i dnevnici čuvaju se lokalno.
 
-\section*{5. Provjere i uočene poteškoće}
-Pri pripremi ove kontrolne točke uspješno je prošlo \textbf{26 testova}
-te Ruff provjera koda. Testovi pokrivaju učitavanje konfiguracije,
-obradu odgovora, uvoz spremljenog JSON-a, ponovno spremanje iste
-snimke i prikaz posljednjeg stanja. Posebno je provjeren nastavak
-periodičkog dohvata nakon simulirane mrežne pogreške te vraćanje
-Windows postavke mirovanja pri završetku procesa.
+\section*{5. Provjere i poteškoće}
+Prošlo je svih \textbf{26 testova}, a kod je prošao i Ruff provjeru.
+Provjerili smo konfiguraciju, obradu odgovora, uvoz spremljenih
+podataka i prikaz zadnje snimke. Provjerili smo i prepoznavanje
+već spremljenih snimki te nastavak prikupljanja nakon mrežne
+pogreške.
 
-Tijekom rada uočen je prekid zbog mirovanja računala 13. studenoga.
-Dohvat je ponovno pokrenut i dodan je zahtjev za sprječavanje
-automatskog mirovanja. Zabilježeni su i pojedinačni neuspjeli zahtjevi
-zbog DNS pogreške ili isteka vremena čekanja. Nakon njih prikupljanje
-se nastavilo u sljedećem ciklusu, uz očuvanje ranije spremljenih
-snimki. Prekidi ostaju vidljivi kao praznine u povijesti.
+Prvi veći problem pojavio se 13. studenoga, kada je računalo
+prešlo u mirovanje. Ponovno smo pokrenuli program i dodali
+zaštitu od automatskog mirovanja tijekom prikupljanja.
+Dogodili su se i pojedinačni problemi s mrežom ili čekanjem
+odgovora API-ja. Program ih je zabilježio i nastavio raditi
+u sljedećem ciklusu. Takvi prekidi vidljivi su kao praznine
+između spremljenih snimki.
 
-\section*{6. Daljnji razvoj i organizacija rada}
-Za KT3, do 18. prosinca, planirani su analiza dostupnosti po stanicama
-i satima te web stranica s kartom, rang-listom i povijesnim grafom.
-Koordinate će se povezati sa stanicama preko identifikatora.
-Dodat će se favoriti i odabir uobičajenog termina korištenja.
+\section*{6. Plan za nastavak rada}
+Za KT3, do 18. prosinca, planiramo napraviti web stranicu s
+kartom stanica. Klikom na stanicu otvorit će se njezina povijest,
+graf po satima i osnovna statistika. Dodat ćemo popis stanica
+koje najčešće ostaju bez bicikala te mogućnost odabira favorita
+i uobičajenog vremena korištenja.
 
-Za KT4, do 22. siječnja, planirani su povezivanje s vremenskim
-podacima iz Open-Metea, usporedba dostupnosti u kišnim i suhim
-terminima te podesive obavijesti e-poštom. Slijede integracijske
-provjere, ispravci i dokumentacija. Daljnji rad podijelit ćemo na
-analitiku i prikaz te vremensku integraciju i obavijesti, uz
-zajedničku provjeru cijelog postupka.
+Za KT4, do 22. siječnja, planiramo povezati podatke s vremenskim
+API-jem Open-Meteo i usporediti dostupnost bicikala u kišnim i
+suhim terminima. Na temelju rezultata i korisničkih postavki
+dodat ćemo obavijesti e-poštom. Na kraju ćemo provjeriti cijeli
+postupak, ispraviti preostale greške i dovršiti upute.
+Posao ćemo podijeliti na analizu i prikaz te povezivanje s
+vremenom i obavijestima, uz zajedničku provjeru aplikacije.
 
 \end{document}
